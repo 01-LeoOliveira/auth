@@ -1,101 +1,230 @@
-import Image from "next/image";
+"use client"
+import React, { useState } from 'react';
+import { Mail, Lock, User, EyeOff, Eye } from 'lucide-react';
+import { FcGoogle } from 'react-icons/fc';
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
+const AuthForms = () => {
+  const [activeForm, setActiveForm] = useState('login');
+  const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    confirmPassword: '',
+    username: ''
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleGoogleLogin = () => {
+    console.log('Iniciando login com Google');
+    // Placeholder for Google OAuth implementation
+  };
+
+  const renderLoginForm = () => (
+    <form className="space-y-4">
+      <div className="relative">
+        <Mail className="absolute left-3 top-3 text-gray-400" />
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          value={formData.email}
+          onChange={handleChange}
+          className="w-full pl-10 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+      <div className="relative">
+        <Lock className="absolute left-3 top-3 text-gray-400" />
+        <input
+          type={showPassword ? 'text' : 'password'}
+          name="password"
+          placeholder="Senha"
+          value={formData.password}
+          onChange={handleChange}
+          className="w-full pl-10 pr-10 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button 
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-3 top-3 text-gray-400"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+          {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+        </button>
+      </div>
+
+      <button 
+        type="submit" 
+        className="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 transition"
+      >
+        Entrar
+      </button>
+
+      <div className="flex items-center my-4">
+        <div className="flex-grow border-t border-gray-300"></div>
+        <span className="px-4 text-gray-500 text-sm">ou</span>
+        <div className="flex-grow border-t border-gray-300"></div>
+      </div>
+
+      <button 
+        type="button"
+        onClick={handleGoogleLogin}
+        className="w-full flex items-center justify-center bg-white border border-gray-300 p-2 rounded-md hover:bg-gray-50 transition"
+      >
+        <FcGoogle className="mr-2" size={24} />
+        Entrar com Google
+      </button>
+
+      <div className="text-center space-y-2">
+        <button 
+          type="button" 
+          onClick={() => setActiveForm('forgot')}
+          className="text-sm text-blue-500 hover:underline block"
         >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+          Esqueceu a senha?
+        </button>
+        <button 
+          type="button" 
+          onClick={() => setActiveForm('register')}
+          className="text-sm text-green-500 hover:underline block"
         >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          Criar uma conta
+        </button>
+      </div>
+    </form>
+  );
+
+  const renderRegisterForm = () => (
+    <form className="space-y-4">
+      <div className="relative">
+        <User className="absolute left-3 top-3 text-gray-400" />
+        <input
+          type="text"
+          name="username"
+          placeholder="Nome de usuário"
+          value={formData.username}
+          onChange={handleChange}
+          className="w-full pl-10 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <div className="relative">
+        <Mail className="absolute left-3 top-3 text-gray-400" />
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          value={formData.email}
+          onChange={handleChange}
+          className="w-full pl-10 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <div className="relative">
+        <Lock className="absolute left-3 top-3 text-gray-400" />
+        <input
+          type={showPassword ? 'text' : 'password'}
+          name="password"
+          placeholder="Senha"
+          value={formData.password}
+          onChange={handleChange}
+          className="w-full pl-10 pr-10 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button 
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-3 top-3 text-gray-400"
+        >
+          {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+        </button>
+      </div>
+
+      <div className="relative">
+        <Lock className="absolute left-3 top-3 text-gray-400" />
+        <input
+          type={showPassword ? 'text' : 'password'}
+          name="confirmPassword"
+          placeholder="Confirmar senha"
+          value={formData.confirmPassword}
+          onChange={handleChange}
+          className="w-full pl-10 pr-10 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button 
+          type="button"
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-3 top-3 text-gray-400"
+        >
+          {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+        </button>
+      </div>
+
+      <button 
+        type="submit" 
+        className="w-full bg-green-500 text-white p-2 rounded-md hover:bg-green-600 transition"
+      >
+        Criar Conta
+      </button>
+
+      <div className="text-center">
+        <button 
+          type="button" 
+          onClick={() => setActiveForm('login')}
+          className="text-sm text-blue-500 hover:underline"
+        >
+          Voltar para Login
+        </button>
+      </div>
+    </form>
+  );
+
+  const renderForgotPasswordForm = () => (
+    <form className="space-y-4">
+      <div className="relative">
+        <Mail className="absolute left-3 top-3 text-gray-400" />
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          value={formData.email}
+          onChange={handleChange}
+          className="w-full pl-10 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+
+      <button 
+        type="submit" 
+        className="w-full bg-purple-500 text-white p-2 rounded-md hover:bg-purple-600 transition"
+      >
+        Redefinir Senha
+      </button>
+
+      <div className="text-center">
+        <button 
+          type="button" 
+          onClick={() => setActiveForm('login')}
+          className="text-sm text-blue-500 hover:underline"
+        >
+          Voltar para Login
+        </button>
+      </div>
+    </form>
+  );
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="bg-white p-8 rounded-lg shadow-md w-96">
+        {activeForm === 'login' && renderLoginForm()}
+        {activeForm === 'register' && renderRegisterForm()}
+        {activeForm === 'forgot' && renderForgotPasswordForm()}
+      </div>
     </div>
   );
-}
+};
+
+export default AuthForms;
