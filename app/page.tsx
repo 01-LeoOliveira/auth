@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useState, ChangeEvent } from 'react';
 import { Mail, Lock, User, EyeOff, Eye } from 'lucide-react';
 import { FcGoogle } from 'react-icons/fc';
 
@@ -13,7 +13,7 @@ const AuthForms = () => {
     username: ''
   });
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
