@@ -1,19 +1,29 @@
-"use client"
-import React, { useState, ChangeEvent } from 'react';
-import { Mail, Lock, User, EyeOff, Eye } from 'lucide-react';
-import { FcGoogle } from 'react-icons/fc';
+"use client";
+import { useState, ChangeEvent, FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, AuthError } from 'firebase/auth';
+import { auth, db } from '../app/src/firebase/firebaseConfig';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 
-const AuthForms = () => {
-  const [activeForm, setActiveForm] = useState('login');
-  const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
+
+interface FormData {
+  name: string;
+  email: string;
+  password: string;
+}
+
+const Members = () => {
+  const [isLogin, setIsLogin] = useState(true);
+  const [formData, setFormData] = useState<FormData>({
+    name: '',
     email: '',
-    password: '',
-    confirmPassword: '',
-    username: ''
+    password: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const router = useRouter();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -21,210 +31,245 @@ const AuthForms = () => {
     }));
   };
 
-  const handleGoogleLogin = () => {
-    console.log('Iniciando login com Google');
-    // Placeholder for Google OAuth implementation
+  const createUserDocument = async (userId: string, userData: Partial<FormData>) => {
+    try {
+      await setDoc(doc(db, 'users', userId), {
+        ...userData,
+        role: 'member',
+        createdAt: new Date().toISOString(),
+        isSubscribed: false
+      });
+    } catch (error) {
+      console.error("Erro ao criar documento do usuário:", error);
+      throw error;
+    }
   };
 
-  const renderLoginForm = () => (
-    <form className="space-y-4">
-      <div className="relative">
-        <Mail className="absolute left-3 top-3 text-gray-400" />
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={formData.email}
-          onChange={handleChange}
-          className="w-full pl-10 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError('');
 
-      <div className="relative">
-        <Lock className="absolute left-3 top-3 text-gray-400" />
-        <input
-          type={showPassword ? 'text' : 'password'}
-          name="password"
-          placeholder="Senha"
-          value={formData.password}
-          onChange={handleChange}
-          className="w-full pl-10 pr-10 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button 
-          type="button"
-          onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-3 top-3 text-gray-400"
-        >
-          {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-        </button>
-      </div>
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
 
-      <button 
-        type="submit" 
-        className="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600 transition"
-      >
-        Entrar
-      </button>
+      // Verificar se o usuário já existe no Firestore
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
 
-      <div className="flex items-center my-4">
-        <div className="flex-grow border-t border-gray-300"></div>
-        <span className="px-4 text-gray-500 text-sm">ou</span>
-        <div className="flex-grow border-t border-gray-300"></div>
-      </div>
+      if (!userDoc.exists()) {
+        // Se não existe, criar novo documento
+        await createUserDocument(user.uid, {
+          name: user.displayName || '',
+          email: user.email || '',
+        });
+      }
 
-      <button 
-        type="button"
-        onClick={handleGoogleLogin}
-        className="w-full flex items-center justify-center bg-white border border-gray-300 p-2 rounded-md hover:bg-gray-50 transition"
-      >
-        <FcGoogle className="mr-2" size={24} />
-        Entrar com Google
-      </button>
+      router.push('/dashboard');
+    } catch (error) {
+      const authError = error as AuthError;
+      setError('Erro ao fazer login com Google: ' + authError.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      <div className="text-center space-y-2">
-        <button 
-          type="button" 
-          onClick={() => setActiveForm('forgot')}
-          className="text-sm text-blue-500 hover:underline block"
-        >
-          Esqueceu a senha?
-        </button>
-        <button 
-          type="button" 
-          onClick={() => setActiveForm('register')}
-          className="text-sm text-green-500 hover:underline block"
-        >
-          Criar uma conta
-        </button>
-      </div>
-    </form>
-  );
+  const handleRegister = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
-  const renderRegisterForm = () => (
-    <form className="space-y-4">
-      <div className="relative">
-        <User className="absolute left-3 top-3 text-gray-400" />
-        <input
-          type="text"
-          name="username"
-          placeholder="Nome de usuário"
-          value={formData.username}
-          onChange={handleChange}
-          className="w-full pl-10 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+    try {
+      if (!formData.email || !formData.password || (!isLogin && !formData.name)) {
+        throw new Error('Por favor, preencha todos os campos');
+      }
 
-      <div className="relative">
-        <Mail className="absolute left-3 top-3 text-gray-400" />
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={formData.email}
-          onChange={handleChange}
-          className="w-full pl-10 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
 
-      <div className="relative">
-        <Lock className="absolute left-3 top-3 text-gray-400" />
-        <input
-          type={showPassword ? 'text' : 'password'}
-          name="password"
-          placeholder="Senha"
-          value={formData.password}
-          onChange={handleChange}
-          className="w-full pl-10 pr-10 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button 
-          type="button"
-          onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-3 top-3 text-gray-400"
-        >
-          {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-        </button>
-      </div>
+      await createUserDocument(userCredential.user.uid, {
+        name: formData.name,
+        email: formData.email,
+      });
 
-      <div className="relative">
-        <Lock className="absolute left-3 top-3 text-gray-400" />
-        <input
-          type={showPassword ? 'text' : 'password'}
-          name="confirmPassword"
-          placeholder="Confirmar senha"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          className="w-full pl-10 pr-10 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button 
-          type="button"
-          onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-3 top-3 text-gray-400"
-        >
-          {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-        </button>
-      </div>
+      router.push('/dashboard');
+    } catch (error) {
+      const authError = error as AuthError;
+      const errorMessages: { [key: string]: string } = {
+        'auth/email-already-in-use': 'Este email já está cadastrado',
+        'auth/invalid-email': 'Email inválido',
+        'auth/operation-not-allowed': 'Operação não permitida',
+        'auth/weak-password': 'Senha muito fraca'
+      };
 
-      <button 
-        type="submit" 
-        className="w-full bg-green-500 text-white p-2 rounded-md hover:bg-green-600 transition"
-      >
-        Criar Conta
-      </button>
+      setError(errorMessages[authError.code] || authError.message || 'Erro ao cadastrar usuário');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      <div className="text-center">
-        <button 
-          type="button" 
-          onClick={() => setActiveForm('login')}
-          className="text-sm text-blue-500 hover:underline"
-        >
-          Voltar para Login
-        </button>
-      </div>
-    </form>
-  );
+  const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
-  const renderForgotPasswordForm = () => (
-    <form className="space-y-4">
-      <div className="relative">
-        <Mail className="absolute left-3 top-3 text-gray-400" />
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={formData.email}
-          onChange={handleChange}
-          className="w-full pl-10 p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+    try {
+      if (!formData.email || !formData.password) {
+        throw new Error('Por favor, preencha todos os campos');
+      }
 
-      <button 
-        type="submit" 
-        className="w-full bg-purple-500 text-white p-2 rounded-md hover:bg-purple-600 transition"
-      >
-        Redefinir Senha
-      </button>
+      await signInWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+      router.push('/dashboard');
+    } catch (error) {
+      const authError = error as AuthError;
+      const errorMessages: { [key: string]: string } = {
+        'auth/invalid-email': 'Email inválido',
+        'auth/user-disabled': 'Usuário desabilitado',
+        'auth/user-not-found': 'Usuário não encontrado',
+        'auth/wrong-password': 'Senha incorreta'
+      };
 
-      <div className="text-center">
-        <button 
-          type="button" 
-          onClick={() => setActiveForm('login')}
-          className="text-sm text-blue-500 hover:underline"
-        >
-          Voltar para Login
-        </button>
-      </div>
-    </form>
-  );
+      setError(errorMessages[authError.code] || authError.message || 'Erro ao fazer login');
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-96">
-        {activeForm === 'login' && renderLoginForm()}
-        {activeForm === 'register' && renderRegisterForm()}
-        {activeForm === 'forgot' && renderForgotPasswordForm()}
+    <div
+      className="flex flex-col items-center justify-center min-h-screen text-white bg-cover bg-center"
+      style={{
+        backgroundImage: `url('/img/fundo.jpg')`
+      }}
+    >
+      <div className="absolute inset-0 bg-black bg-opacity-60 backdrop-blur-md"></div>
+      <div className="relative z-10 flex flex-col items-center w-full max-w-lg px-4">
+        <h1 className="text-4xl sm:text-5xl font-extrabold mb-12 text-center text-white tracking-wide drop-shadow-md">
+          Área de Membros Cindy Trans
+        </h1>
+
+        <div className="bg-black bg-opacity-80 p-8 rounded-lg shadow-lg w-full">
+          <h2 className="text-3xl font-semibold text-center mb-4">
+            {isLogin ? 'Login' : 'Torne-se Membro'}
+          </h2>
+
+          <p className="text-center text-gray-300 mb-6">
+            {isLogin
+              ? 'Faça login para acessar conteúdos exclusivos.'
+              : 'Para acessar conteúdos exclusivos, torne-se um membro e aproveite vídeos e fotos especiais.'}
+          </p>
+
+          {error && (
+            <div className="bg-red-500 bg-opacity-10 border border-red-500 text-red-500 px-4 py-2 rounded-lg mb-6">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={isLogin ? handleLogin : handleRegister} className="space-y-5">
+            {!isLogin && (
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-400">
+                  Nome Completo
+                </label>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  required={!isLogin}
+                  className="mt-1 block w-full bg-gray-700 text-gray-200 rounded-lg p-3 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-red-600"
+                  disabled={loading}
+                />
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-400">
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                required
+                className="mt-1 block w-full bg-gray-700 text-gray-200 rounded-lg p-3 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-red-600"
+                disabled={loading}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-400">
+                Senha
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                required
+                className="mt-1 block w-full bg-gray-700 text-gray-200 rounded-lg p-3 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-red-600"
+                disabled={loading}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Processando...' : isLogin ? 'Login' : 'Cadastrar-se'}
+            </button>
+          </form>
+
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-600"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-black text-gray-400">Ou continue com</span>
+            </div>
+          </div>
+
+          <button
+            onClick={handleGoogleLogin}
+            disabled={loading}
+            className="w-full bg-white text-gray-800 font-bold py-3 px-4 rounded-lg flex items-center justify-center space-x-2 hover:bg-gray-100 transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <img
+              src="/img/google-icon.png"
+              alt="Google"
+              className="w-5 h-5"
+            />
+            <span>Google</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setError('');
+              setFormData({ name: '', email: '', password: '' });
+            }}
+            className="mt-6 text-sm text-gray-400 hover:text-white transition-all duration-300 ease-in-out w-full text-center"
+            disabled={loading}
+          >
+            {isLogin ? 'Ainda não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça login'}
+          </button>
+        </div>
       </div>
     </div>
   );
 };
 
-export default AuthForms;
+export default Members;
